@@ -1,81 +1,80 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchNotes, createNote, deleteNote } from "../../services/noteService";
-import NoteList from "../NoteList/NoteList";
-import NoteForm from "../NoteForm/NoteForm";
-import Modal from "../Modal/Modal";
-import Pagination from "../Pagination/Pagination";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { FetchNotesResponse } from "../../services/noteService";
+import { fetchNotes } from "../../services/noteService";
 import SearchBox from "../SearchBox/SearchBox";
+import NoteList from "../NoteList/NoteList";
+import Pagination from "../Pagination/Pagination";
+import Modal from "../Modal/Modal";
+import NoteForm from "../NoteForm/NoteForm";
 import css from "./App.module.css";
 
 export default function App() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const queryClient = useQueryClient();
+  // debounce
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(id);
+  }, [search]);
 
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["notes", page, search],
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  // correct real queryKey
+  const queryKey = useMemo(
+    () => ["notes", debouncedSearch, page],
+    [debouncedSearch, page]
+  );
+
+  const { data, isFetching, isError } = useQuery<FetchNotesResponse>({
+    queryKey,
     queryFn: () =>
       fetchNotes({
         page,
         perPage: 12,
-        search,
+        search: debouncedSearch,
       }),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    placeholderData: {
+      notes: [],
+      totalPages: 1,
+      page: 1,
+      total: 0,
     },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-    },
+    staleTime: 1000 * 30,
   });
 
   return (
     <div className={css.app}>
-      <SearchBox value={search} onChange={setSearch} />
+      <SearchBox value={search} onChange={handleSearchChange} />
 
-      {isPending && <div>Loading…</div>}
-      {isError && <div>Error loading notes</div>}
-
-      {data?.notes?.length ? (
-        <NoteList
-          notes={data.notes}
-          onDelete={(id) => deleteMutation.mutate(id)}
-        />
-      ) : (
-        <div>No notes found</div>
-      )}
-
-      {data && data.totalPages > 1 && (
-        <Pagination
-          pageCount={data.totalPages}
-          currentPage={page}
-          onPageChange={setPage}
-        />
-      )}
+      <button onClick={() => setIsModalOpen(true)}>Create note</button>
 
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
           <NoteForm
-            onSubmit={async (values) => {
-              await createMutation.mutateAsync(values);
-              setIsModalOpen(false);
-            }}
+            onSuccess={() => setIsModalOpen(false)}
             onCancel={() => setIsModalOpen(false)}
           />
         </Modal>
       )}
 
-      <button onClick={() => setIsModalOpen(true)}>Add Note</button>
+      {isError && <p>Error loading notes</p>}
+
+      <NoteList notes={data?.notes ?? []} />
+
+      <Pagination
+        pageCount={Math.max(data?.totalPages ?? 1, 1)}
+        currentPage={page}
+        onPageChange={(p) => setPage(p)}
+      />
+
+      {isFetching && <p>Loading...</p>}
     </div>
   );
 }

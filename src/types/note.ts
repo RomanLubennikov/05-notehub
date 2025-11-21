@@ -1,13 +1,18 @@
-export interface NoteTag {
-  id: string;
-  name: string;
-}
+export type NoteTag = "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
 
 export interface Note {
   id: string;
   title: string;
   content: string;
-  tag: string; // або NoteTag якщо бекенд дає об'єкт
+  tag: NoteTag;
   createdAt: string;
-  updatedAt?: string;
+  updatedAt: string;
 }
+
+export interface CreateNoteInput {
+  title: string;
+  content?: string;
+  tag: NoteTag;
+}
+
+export type NoteFormValues = CreateNoteInput;

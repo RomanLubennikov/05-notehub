@@ -1,87 +1,102 @@
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as Yup from "yup";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { CreateNoteInput } from "../../types/note";
+import { createNote } from "../../services/noteService";
 import css from "./NoteForm.module.css";
-import type { CreateNotePayload } from "../../services/noteService";
 
 interface NoteFormProps {
-  onSubmit: (values: CreateNotePayload) => Promise<void> | void;
   onCancel: () => void;
+  onSuccess?: () => void;
 }
 
-const validationSchema = Yup.object({
-  title: Yup.string().min(3, "Min 3").max(50, "Max 50").required("Required"),
-  content: Yup.string().max(500, "Max 500"),
-  tag: Yup.mixed()
-    .oneOf(["Todo", "Work", "Personal", "Meeting", "Shopping"])
-    .required("Required"),
-});
+export default function NoteForm({ onCancel, onSuccess }: NoteFormProps) {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [tag, setTag] = useState("Todo");
 
-export default function NoteForm({ onSubmit, onCancel }: NoteFormProps) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (payload: CreateNoteInput) => createNote(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      if (onSuccess) onSuccess();
+      setTitle("");
+      setContent("");
+      setTag("Todo");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload: CreateNoteInput = {
+      title,
+      content,
+      tag,
+    };
+
+    mutation.mutate(payload);
+  };
+
   return (
-    <Formik
-      initialValues={
-        { title: "", content: "", tag: "Todo" } as CreateNotePayload
-      }
-      validationSchema={validationSchema}
-      onSubmit={async (values, { resetForm }) => {
-        await onSubmit(values);
-        resetForm();
-      }}
-    >
-      {({ isSubmitting }) => (
-        <Form className={css.form}>
-          <div className={css.formGroup}>
-            <label htmlFor="title">Title</label>
-            <Field id="title" name="title" className={css.input} />
-            <ErrorMessage name="title" component="span" className={css.error} />
-          </div>
+    <form className={css.form} onSubmit={handleSubmit}>
+      <h2 className={css.title}>Create note</h2>
 
-          <div className={css.formGroup}>
-            <label htmlFor="content">Content</label>
-            <Field
-              as="textarea"
-              id="content"
-              name="content"
-              rows={8}
-              className={css.textarea}
-            />
-            <ErrorMessage
-              name="content"
-              component="span"
-              className={css.error}
-            />
-          </div>
+      <div className={css.field}>
+        <label className={css.label}>Title</label>
+        <input
+          className={css.input}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
+      </div>
 
-          <div className={css.formGroup}>
-            <label htmlFor="tag">Tag</label>
-            <Field as="select" id="tag" name="tag" className={css.select}>
-              <option value="Todo">Todo</option>
-              <option value="Work">Work</option>
-              <option value="Personal">Personal</option>
-              <option value="Meeting">Meeting</option>
-              <option value="Shopping">Shopping</option>
-            </Field>
-            <ErrorMessage name="tag" component="span" className={css.error} />
-          </div>
+      <div className={css.field}>
+        <label className={css.label}>Content</label>
+        <textarea
+          className={css.textarea}
+          rows={6}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+        />
+      </div>
 
-          <div className={css.actions}>
-            <button
-              type="button"
-              className={css.cancelButton}
-              onClick={onCancel}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={css.submitButton}
-              disabled={isSubmitting}
-            >
-              Create note
-            </button>
-          </div>
-        </Form>
+      <div className={css.field}>
+        <label className={css.label}>Tag</label>
+        <select
+          className={css.select}
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+        >
+          <option value="Todo">Todo</option>
+          <option value="Work">Work</option>
+          <option value="Personal">Personal</option>
+          <option value="Meeting">Meeting</option>
+          <option value="Shopping">Shopping</option>
+        </select>
+      </div>
+
+      <div className={css.actions}>
+        <button type="button" className={css.cancelButton} onClick={onCancel}>
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          className={css.submitButton}
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending ? "Saving..." : "Create note"}
+        </button>
+      </div>
+
+      {mutation.isError && (
+        <div role="alert" className={css.submitError}>
+          Error creating note — please try again.
+        </div>
       )}
-    </Formik>
+    </form>
   );
 }
