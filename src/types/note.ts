@@ -14,5 +14,3 @@ export interface CreateNoteInput {
   content?: string;
   tag: NoteTag;
 }
-
-export type NoteFormValues = CreateNoteInput;

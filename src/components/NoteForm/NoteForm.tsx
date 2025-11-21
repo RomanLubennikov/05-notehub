@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { CreateNoteInput } from "../../types/note";
+import type { CreateNoteInput, NoteTag } from "../../types/note";
 import { createNote } from "../../services/noteService";
 import css from "./NoteForm.module.css";
 
@@ -12,7 +12,7 @@ interface NoteFormProps {
 export default function NoteForm({ onCancel, onSuccess }: NoteFormProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tag, setTag] = useState("Todo");
+  const [tag, setTag] = useState<NoteTag>("Todo");
 
   const queryClient = useQueryClient();
 
@@ -68,7 +68,7 @@ export default function NoteForm({ onCancel, onSuccess }: NoteFormProps) {
         <select
           className={css.select}
           value={tag}
-          onChange={(e) => setTag(e.target.value)}
+          onChange={(e) => setTag(e.target.value as NoteTag)}
         >
           <option value="Todo">Todo</option>
           <option value="Work">Work</option>
