@@ -15,7 +15,6 @@ export default function App() {
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // debounce
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(id);
@@ -26,7 +25,6 @@ export default function App() {
     setPage(1);
   }
 
-  // correct real queryKey
   const queryKey = useMemo(
     () => ["notes", debouncedSearch, page],
     [debouncedSearch, page]
@@ -49,11 +47,17 @@ export default function App() {
     staleTime: 1000 * 30,
   });
 
+  const notes = data?.notes ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
   return (
     <div className={css.app}>
-      <SearchBox value={search} onChange={handleSearchChange} />
-
-      <button onClick={() => setIsModalOpen(true)}>Create note</button>
+      <div className={css.toolbar}>
+        <SearchBox value={search} onChange={handleSearchChange} />
+        <button className={css.button} onClick={() => setIsModalOpen(true)}>
+          Create note
+        </button>
+      </div>
 
       {isModalOpen && (
         <Modal onClose={() => setIsModalOpen(false)}>
@@ -66,14 +70,17 @@ export default function App() {
 
       {isError && <p>Error loading notes</p>}
 
-      <NoteList notes={data?.notes ?? []} />
+      {notes.length > 0 ? <NoteList notes={notes} /> : <p>No notes found</p>}
 
-      <Pagination
-        pageCount={Math.max(data?.totalPages ?? 1, 1)}
-        currentPage={page}
-        onPageChange={(p) => setPage(p)}
-      />
+      {totalPages > 1 && (
+        <Pagination
+          pageCount={totalPages}
+          currentPage={page}
+          onPageChange={(p) => setPage(p)}
+        />
+      )}
 
+      {/* Loading */}
       {isFetching && <p>Loading...</p>}
     </div>
   );

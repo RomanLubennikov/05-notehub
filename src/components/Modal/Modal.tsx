@@ -12,17 +12,21 @@ const modalRoot = document.getElementById("modal-root") || document.body;
 export default function Modal({ children, onClose }: ModalProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+      }
     }
+
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = previousOverflow || "";
+      document.body.style.overflow = previous || "";
     };
   }, []);
 
@@ -33,9 +37,9 @@ export default function Modal({ children, onClose }: ModalProps) {
   return createPortal(
     <div
       className={css.backdrop}
+      onClick={onBackdropClick}
       role="dialog"
       aria-modal="true"
-      onClick={onBackdropClick}
     >
       <div className={css.modal}>{children}</div>
     </div>,

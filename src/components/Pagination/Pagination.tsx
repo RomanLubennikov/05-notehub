@@ -21,12 +21,8 @@ export default function Pagination({
       pageCount={Math.max(pageCount, 1)}
       forcePage={currentPage - 1}
       onPageChange={(e) => onPageChange(e.selected + 1)}
-      containerClassName={css.container}
+      containerClassName={css.pagination}
       activeClassName={css.active}
-      pageClassName={css.page}
-      previousClassName={css.page}
-      nextClassName={css.page}
-      breakClassName={css.page}
     />
   );
 }
